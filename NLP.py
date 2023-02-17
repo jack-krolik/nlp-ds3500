@@ -3,9 +3,12 @@ Core framework class for NLP Comparative Analysis
 """
 
 from collections import Counter, defaultdict
+import nltk
 import matplotlib.pyplot as plt
+import nltk.corpus
 from parsers import read_lrc, df_parser
 import string as s
+
 
 
 class NaturalLanguage:
@@ -14,15 +17,22 @@ class NaturalLanguage:
         # manage data about the different texts that
         # we register with the framework
         self.data = defaultdict(dict)
+        self.song = ""
 
     @staticmethod
-    def clean_string(string):
+    def clean_string(string, add_words=None):
+        stopwords = nltk.corpus.stopwords.words('english')
+
+        stopwords.append(add_words)
 
         string = string.replace('\n', ' ')
 
         clean_string = "".join([letter.lower() for letter in string if letter not in s.punctuation])
 
-        return clean_string
+        clean_string_without_sw = [word for word in clean_string.split() if word not in stopwords]
+
+
+        return " ".join(clean_string_without_sw)
 
     @staticmethod
     def _get_results(string):
@@ -56,6 +66,7 @@ class NaturalLanguage:
         for k, v in results.items():
             self.data[k][label] = v
 
+
     def load_text(self, filename, label=None, parser=None):
         """ Register a document with the framework """
         if parser is None:  # do default parsing of standard .txt file
@@ -63,6 +74,7 @@ class NaturalLanguage:
 
         elif parser == read_lrc:
             f = read_lrc(filename)
+            self.song = f
             results = NaturalLanguage._get_results(f)
 
         else:
@@ -87,5 +99,6 @@ class NaturalLanguage:
 # test
 nlp = NaturalLanguage()
 
-nlp.load_text('Songs/Dont-stop-me-now-by-Queen.lrc', parser = read_lrc)
-nlp.data
+nlp.load_text('Songs/Dont-stop-me-now-by-Queen.lrc', parser=read_lrc)
+print(nlp.data)
+print(df_parser(nlp.song))
