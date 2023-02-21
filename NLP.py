@@ -113,7 +113,7 @@ class NaturalLanguage:
         :param cols (list): column names for song dataframe
         :return (dataframe): sentiment dataframe of the song
         """
-
+        assert isinstance(cols, list), "cols parameter must be a list"
         # create a dataframe for the song
         song_df = pd.DataFrame(columns=cols)
 
@@ -158,7 +158,7 @@ class NaturalLanguage:
         # into the internal state of the framework
         self.song = song
         self._save_results(label, results)
-        self.df = self.df_parser()
+        self.df = self.df_parser(cols=kwargs.get("cols", ['Line Number', 'Lyric', 'Num Words']))
 
 
 # test
