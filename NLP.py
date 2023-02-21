@@ -7,10 +7,12 @@ NLP
 
 from collections import Counter, defaultdict
 import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
 import nltk.corpus
-from parsers import read_lrc, df_parser
+from parsers import read_lrc
 import string as s
+import pandas as pd
 
 
 
@@ -21,6 +23,7 @@ class NaturalLanguage:
         # manage data about the different texts that we register with the framework
         self.data = defaultdict(dict)
         self.song = ""
+        self.df = None
 
     @staticmethod
     def clean_string(string, explicit=False, add_words=None):
@@ -103,6 +106,31 @@ class NaturalLanguage:
         for k, v in results.items():
             self.data[k][label] = v
 
+    def df_parser(self, cols=['Line Number', 'Lyric', 'Num Words']):
+        """
+        Gets a dataframe of sentiment about the song
+        :param string: song
+        :param cols (list): column names for song dataframe
+        :return (dataframe): sentiment dataframe of the song
+        """
+
+        # create a dataframe for the song
+        song_df = pd.DataFrame(columns=cols)
+
+        # get a list of each lyric line
+        lyric_list = self.song.split('\n')
+
+        # intitalize sentiment analyzer
+        sid = SentimentIntensityAnalyzer()
+
+        # add each lyric line, the length, and sentiment to the song_df
+        for lyric_idx, lyric in enumerate(lyric_list):
+            lyric_df = pd.Series({'Line Number': lyric_idx + 1, 'Lyric': lyric, 'Num Words': len(lyric),
+                                  'Sentiment': sid.polarity_scores(lyric)})
+
+            song_df = pd.concat([song_df, lyric_df.to_frame().T], ignore_index=True)
+
+        return song_df
     def load_text(self, filename, label=None, parser=None, **kwargs):
         """
         Register a document with the framework
@@ -130,6 +158,7 @@ class NaturalLanguage:
         # into the internal state of the framework
         self.song = song
         self._save_results(label, results)
+        self.df = self.df_parser()
 
 
 # test
@@ -144,4 +173,4 @@ nlp = NaturalLanguage()
 nlp.load_text('Songs/6-Foot-7-foot-by-Lil-Wayne.lrc', parser=read_lrc, explicit=False)
 print(nlp.data)
 print(nlp.song)
-print(df_parser(nlp.song))
+print(nlp.df.to_string())

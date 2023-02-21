@@ -1,7 +1,6 @@
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import json
 from collections import Counter
-import pandas as pd
+
 
 
 def read_lrc(filename):
@@ -44,31 +43,7 @@ def json_parser(filename):
     return {'wordcount': wc, 'numwords': num}
 
 
-def df_parser(string):
-    """
-    Gets a dataframe of sentiment about the song
-    :param string: song
-    :return (dataframe): sentiment dataframe of the song
-    """
 
-    # create a dataframe for the song
-    song_df = pd.DataFrame(columns = ['Line Number', 'Lyric', 'Num Words'])
-
-    # get a list of each lyric line
-    lyric_list = string.split('\n')
-
-    # intitalize sentiment analyzer
-    sid = SentimentIntensityAnalyzer()
-
-    # add each lyric line, the length, and sentiment to the song_df
-    for lyric_idx, lyric in enumerate(lyric_list):
-
-        lyric_df = pd.Series({'Line Number': lyric_idx + 1, 'Lyric': lyric, 'Num Words': len(lyric),
-                              'Sentiment': sid.polarity_scores(lyric)})
-
-        song_df = pd.concat([song_df, lyric_df.to_frame().T], ignore_index=True)
-
-    return song_df
 
 
 
