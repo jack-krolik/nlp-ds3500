@@ -21,7 +21,7 @@ class NaturalLanguage:
 
     def __init__(self):
         # manage data about the different texts that we register with the framework
-        self.data = defaultdict(dict)
+        self.data = {}
         self.song = ""
         self.df = None
 
@@ -104,7 +104,7 @@ class NaturalLanguage:
         """
 
         for k, v in results.items():
-            self.data[k][label] = v
+            self.data[k] = v
 
     def df_parser(self, cols=['Line Number', 'Lyric', 'Num Words']):
         """
@@ -120,7 +120,7 @@ class NaturalLanguage:
         # get a list of each lyric line
         lyric_list = self.song.split('\n')
 
-        # intitalize sentiment analyzer
+        # initialize sentiment analyzer
         sid = SentimentIntensityAnalyzer()
 
         # add each lyric line, the length, and sentiment to the song_df
@@ -131,6 +131,7 @@ class NaturalLanguage:
             song_df = pd.concat([song_df, lyric_df.to_frame().T], ignore_index=True)
 
         return song_df
+
     def load_text(self, filename, label=None, parser=None, **kwargs):
         """
         Register a document with the framework
@@ -164,13 +165,13 @@ class NaturalLanguage:
 # test
 nlp = NaturalLanguage()
 
-# nlp.load_text('Songs/Dont-stop-me-now-by-Queen.lrc', parser=read_lrc)
-# print(nlp.data)
-# print(nlp.song)
-# print(df_parser(nlp.song))
-
-
-nlp.load_text('Songs/6-Foot-7-foot-by-Lil-Wayne.lrc', parser=read_lrc, explicit=False)
+nlp.load_text('Songs/Dont-stop-me-now-by-Queen.lrc', parser=read_lrc)
 print(nlp.data)
 print(nlp.song)
 print(nlp.df.to_string())
+
+
+# nlp.load_text('Songs/6-Foot-7-foot-by-Lil-Wayne.lrc', parser=read_lrc, explicit=False)
+# print(nlp.data)
+# print(nlp.song)
+# print(nlp.df.to_string())
