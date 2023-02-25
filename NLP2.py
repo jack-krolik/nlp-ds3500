@@ -12,6 +12,7 @@ import nltk.corpus
 from parsers import read_lrc
 import string as s
 import pandas as pd
+import seaborn as sns
 
 
 class NaturalLanguage:
@@ -125,7 +126,7 @@ class NaturalLanguage:
         # add each lyric line, the length, and sentiment to the song_df
         for lyric_idx, lyric in enumerate(lyric_list):
             lyric_df = pd.Series({'Line Number': lyric_idx + 1, 'Lyric': lyric, 'Num Words': len(lyric),
-                                  'Sentiment': sid.polarity_scores(lyric)})
+                                  'Sentiment': sid.polarity_scores(lyric)['compound']})
 
             song_df = pd.concat([song_df, lyric_df.to_frame().T], ignore_index=True)
 
@@ -172,6 +173,94 @@ class NaturalLanguage:
 
         for idx, song in enumerate(self.songs):
             self.songs[idx] = song.replace("\n", " ")
+
+    #def wordcount_sankey(self):
+
+    def plot_sentiment(self, songs_list, songs_names):
+        """
+        Plot every songs' sentiment scores by line in subplots
+
+        :param songs_list (list): list of lrc song file path
+        :param songs_names (list): list of song names
+        :return: subplots of each song
+        """
+        # Determine the number of rows and columns needed for the subplots
+
+        if len(songs_list) == 1:
+            comp = visual_sentiment(songs[0])
+            rolling_avg = pd.Series(comp).rolling(window=4).mean()
+
+            plt.plot(range(len(comp)), comp, c='black', label='total sentiment score')
+            plt.plot(range(len(rolling_avg)), rolling_avg, c='red', label='rolling average')
+            plt.title(songs_names[0])
+            plt.xlabel('Lyric Line Number')
+            plt.ylabel('Sentiment Score')
+            plt.legend(loc='upper left')
+
+        else:
+
+            plot_subplots()
+
+    def plot_subplots(self):
+
+        n_songs = len(songs_list)
+        n_cols = min(n_songs, 3)
+        n_rows = (n_songs + n_cols - 1) // n_cols
+
+        # Create the figure and subplots
+        sns.set()
+        fig, axs = plt.subplots(n_rows, n_cols, figsize=(30, 5 * n_rows))
+        fig.subplots_adjust(hspace=0.5, wspace=0.2)
+
+        if n_songs == 1:
+            comp = visual_sentiment(songs[0])
+            rolling_avg = pd.Series(comp).rolling(window=4).mean()
+
+            plt.plot(range(len(comp)), comp, c='black', label='total sentiment score')
+            plt.plot(range(len(rolling_avg)), rolling_avg, c='red', label='rolling average')
+            plt.title(songs_names[0])
+            plt.xlabel('Lyric Line Number')
+            plt.ylabel('Sentiment Score')
+            plt.legend(loc='upper left')
+
+        elif n_songs == 2 or n_songs == 3:
+            for i, (song, name) in enumerate(zip(songs_list, songs_names)):
+                comp = visual_sentiment(songs[i])
+                rolling_avg = pd.Series(comp).rolling(window=4).mean()
+                axs[i].plot(range(len(comp)), comp, c='black', label='total sentiment score')
+                axs[i].plot(range(len(rolling_avg)), rolling_avg, c='red', label='rolling average')
+                axs[i].set_title(songs_names[i])
+                axs[i].set_xlabel('Lyric Line Number')
+                axs[i].set_ylabel('Sentiment Score')
+                axs[i].legend(loc='upper left')
+
+        else:
+            # Loop over each song and plot its sentiment scores on a subplot
+            for i, (song, name) in enumerate(zip(songs_list, songs_names)):
+                # calculate row and column index based on song index
+                row = i // n_cols
+                col = i % n_cols
+
+                # Get sentiment scores and rolling average for the current song
+                comp = visual_sentiment(song)
+                rolling_avg = pd.Series(comp).rolling(window=4).mean()
+
+                # Plot the sentiment scores and rolling average on the subplot
+                axs[row, col].plot(range(len(comp)), comp, c='black', label='total sentiment score')
+                axs[row, col].plot(range(len(rolling_avg)), rolling_avg, c='red', label='rolling average')
+                axs[row, col].set_title(name)
+                axs[row, col].set_xlabel('Lyric Line Number')
+                axs[row, col].set_ylabel('Sentiment Score')
+                axs[row, col].legend(loc='upper left')
+
+            # Remove any unused subplots
+            for i in range(n_songs, n_rows * n_cols):
+                row = i // n_cols
+                col = i % n_cols
+                axs[row, col].set_visible(False)
+
+        plt.show()
+
 
 """
 nlp = NaturalLanguage()
