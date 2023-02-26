@@ -9,10 +9,13 @@ import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
 import nltk.corpus
-from parsers import read_lrc
+from parser import read_lrc
 import string as s
 import pandas as pd
 import seaborn as sns
+from ErrorHandler import *
+import plotly.graph_objects as go
+
 
 
 class NaturalLanguage:
@@ -22,27 +25,19 @@ class NaturalLanguage:
         # manage data about the different texts that we register with the framework
         self.filenames = filenames
         self.data = defaultdict(lambda: {})
-        self.songs = []
-
+        self.lyrics = []
         self.load_text(filenames, labels, parser, **kwargs)
-
-    def __str__(self):
-
-        for song in self.filenames:
-            print(song)
-
-        print(self.data['Songs\\Dont-stop-me-now-by-Queen.lrc']['df'].to_string())
-
-        return 'hi'
 
     @staticmethod
     def clean_string(string, explicit=False, add_words=None):
-        """
-        static method to clean the song
-        :param string: song string
-        :param explicit: whether to remove explicit words
-        :param add_words: additional words to be removed from song
-        :return: clean song as a string
+        """ static method to clean the song
+        Args:
+            string (str): song string
+            explicit (bool): whether to remove explicit words
+            add_words (list of str): additional words to be removed from song
+
+        Returns:
+            final_string (str): clean song as a string
         """
 
         # get the stopwords
@@ -74,10 +69,13 @@ class NaturalLanguage:
 
     @staticmethod
     def _get_results(string, **kwargs):
-        """
-        static method to get results of the song
-        :param string: song as a string
-        :return (dict): result statistics of song
+        """ static method to get results of the song
+
+        Args:
+            string (str): song as a string
+
+        Returns:
+            results (dict): dictionary containing word frequency and total words in song
         """
 
         # get the cleaned song
@@ -94,31 +92,43 @@ class NaturalLanguage:
 
     @staticmethod
     def _default_parser(filename, **kwargs):
-        """
-        static method to parse a txt file
-        :param filename: name of file
-        :return (song): the song and the result statistics
-        """
-        with open(filename) as f:
-            contents = f.read()
+        """ static method to parse a txt file
 
-        song = contents
-        results = NaturalLanguage._get_results(contents, **kwargs)
+        Args:
+            filename (str): name of file
+
+        Returns:
+            song (str): lyrics of the song
+            results (dict): stats about the song
+        """
+        # if the file is not found throw an error otherwise get the song lyrics
+        try:
+            with open(filename) as f:
+                song = f.read()
+        except FileNotFoundError:
+            raise FileNotFound(filename)
+
+        # get the results
+        results = NaturalLanguage._get_results(song, **kwargs)
 
         return song, results
 
-    def df_parser(self, idx, cols=['Line Number', 'Lyric', 'Num Words']):
+    def df_parser(self, idx, **kwargs):
+        """ gets a dataframe of sentiment about the song
+
+        Args:
+            idx (int): index of lyric list
+
+        Returns:
+            song_df (dataframe): sentiment dataframe of the song
         """
-        Gets a dataframe of sentiment about the song
-        :param string: song
-        :param cols (list): column names for song dataframe
-        :return (dataframe): sentiment dataframe of the song
-        """
+        cols = kwargs.get("cols", ['Line Number', 'Lyric', 'Num Words'])
         assert isinstance(cols, list), "cols parameter must be a list"
+
         # create a dataframe for the song
         song_df = pd.DataFrame(columns=cols)
 
-        lyric_list = self.songs[idx].split('\n')
+        lyric_list = self.lyrics[idx].split('\n')
 
         # initialize sentiment analyzer
         sid = SentimentIntensityAnalyzer()
@@ -133,12 +143,13 @@ class NaturalLanguage:
         return song_df
 
     def load_text(self, filenames, labels=None, parser=None, **kwargs):
-        """
-        Register a document with the framework
-        :param filenames (string): filename of the song
-        :param label (string): label to assign to the song
-        :param parser (func): parser function to use
-        :param kwargs: other keywords passed by user
+        """ Register a document with the framework
+
+        Args:
+            filenames (string): filename of the song
+            labels (string): label to assign to the song
+            parser (func): parser function to use
+            kwargs: other keywords passed by user
         """
         assert isinstance(filenames, list), f"filenames parameter must be a list, got type {type(filenames)}"
 
@@ -150,31 +161,84 @@ class NaturalLanguage:
 
         for idx, filename in enumerate(filenames):
 
-            if parser is None:  # do default parsing of standard .txt file
+            # do parsing of lrc file
+            if parser == 'read_lrc':
+                if parser == 'read_lrc':
+                    song = read_lrc(filename)
+
+                    results = NaturalLanguage._get_results(song, **kwargs)
+
+                else:
+                    assert True, 'Parser Not Found'
+
+            # do default parsing of standard .txt file
+            else:
+
                 song, results = NaturalLanguage._default_parser(filename, **kwargs)
 
-            elif parser == 'read_lrc':
-                song = read_lrc(filename) # do parsing of lrc file
-
-                results = NaturalLanguage._get_results(song, **kwargs)
-
-            else:
-                song = ""
-                results = parser(filename)
-
-            # Save / integrate the song and song data we extracted from the file
+            # Save / integrate the song lyrics and song data we extracted from the file
             # into the internal state of the framework
-            self.songs.append(song)
+            self.lyrics.append(song)
 
             for k, v in results.items():
                 self.data[labels[idx]][k] = v
 
-            self.data[labels[idx]]['df'] = self.df_parser(idx, cols=kwargs.get("cols", ['Line Number', 'Lyric', 'Num Words']))
+            self.data[labels[idx]]['df'] = self.df_parser(idx, **kwargs)
 
-        for idx, song in enumerate(self.songs):
-            self.songs[idx] = song.replace("\n", " ")
+        # get rid of the newline strings in the song lyrics
+        for idx, song in enumerate(self.lyrics):
+            self.lyrics[idx] = song.replace("\n", " ")
 
-    #def wordcount_sankey(self):
+    def wordcount_sankey(self, num_words=10):
+        """ creates a sankey diagram of the top ten words used in lyrics
+
+        Args:
+            num_words (int): number of words to be shown in sankey
+        """
+
+        # double checks if num_words in an integer
+        assert type(num_words) == int, f"Make sure 'num_words' is an int ({type(num_words)} given)"
+
+        # creates dict to count word frequency across all songs
+        top_ten_dict = defaultdict(lambda: 0)
+
+        # finds word count across all songs
+        for value in self.data.values():
+            for word, count in dict(value['wordcount']).items():
+                top_ten_dict[word] += count
+
+        # sorts words by most used, cutting off words ranked below index num_words
+        ds_top = pd.Series(top_ten_dict).sort_values(ascending=False)[:num_words]
+
+        # makes list of most used words
+        top = list(ds_top.index)
+
+        # creates link dictionary to be used in sankey creation
+        sankey_dict = {'source': [],
+                       'target': [],
+                       'value': []}
+
+        # fills list into the sankey dictionary
+        for key, value in self.data.items():
+            for word, count in dict(value['wordcount']).items():
+                if word in top:
+                    sankey_dict['source'].append(key)
+                    sankey_dict['target'].append(word)
+                    sankey_dict['value'].append(count)
+
+        # creates a set for all sources and targets, and setting that as label for nodes
+        string_set = list(set(list(sankey_dict['source']) + list(sankey_dict['target'])))
+        node = {'label': string_set}
+
+        # converts every string into a unique number using index in string set
+        for key in ['source', 'target']:
+            for i in range(len(sankey_dict[key])):
+                sankey_dict[key][i] = string_set.index(sankey_dict[key][i])
+
+        # plots and displays sankey diagram
+        sk = go.Sankey(link=sankey_dict, node=node)
+        fig = go.Figure(sk)
+        fig.show()
 
     def plot_sentiment(self, songs_list, songs_names):
         """
@@ -212,18 +276,7 @@ class NaturalLanguage:
         fig, axs = plt.subplots(n_rows, n_cols, figsize=(30, 5 * n_rows))
         fig.subplots_adjust(hspace=0.5, wspace=0.2)
 
-        if n_songs == 1:
-            comp = visual_sentiment(songs[0])
-            rolling_avg = pd.Series(comp).rolling(window=4).mean()
-
-            plt.plot(range(len(comp)), comp, c='black', label='total sentiment score')
-            plt.plot(range(len(rolling_avg)), rolling_avg, c='red', label='rolling average')
-            plt.title(songs_names[0])
-            plt.xlabel('Lyric Line Number')
-            plt.ylabel('Sentiment Score')
-            plt.legend(loc='upper left')
-
-        elif n_songs == 2 or n_songs == 3:
+        if n_songs == 2 or n_songs == 3:
             for i, (song, name) in enumerate(zip(songs_list, songs_names)):
                 comp = visual_sentiment(songs[i])
                 rolling_avg = pd.Series(comp).rolling(window=4).mean()
@@ -262,17 +315,16 @@ class NaturalLanguage:
         plt.show()
 
 
-"""
-nlp = NaturalLanguage()
 
-nlp.load_text(['Songs/Dont-stop-me-now-by-Queen.lrc', 'Songs/6-Foot-7-foot-by-Lil-Wayne.lrc'], parser=read_lrc)
-print(nlp.data)
-print(nlp.songs)
-print(nlp.df)
+# nlp = NaturalLanguage()
+
+# nlp.load_text(['Songs/Dont-stop-me-now-by-Queen.lrc', 'Songs/6-Foot-7-foot-by-Lil-Wayne.lrc'], parser=read_lrc)
+# print(nlp.data)
+# print(nlp.songs)
+# print(nlp.df)
 # print(nlp.df['Songs/6-Foot-7-foot-by-Lil-Wayne.lrc'])
 
 # nlp.load_text('Songs/6-Foot-7-foot-by-Lil-Wayne.lrc', parser=read_lrc, explicit=False)
 # print(nlp.data)
 # print(nlp.song)
 # print(nlp.df.to_string())
-"""
