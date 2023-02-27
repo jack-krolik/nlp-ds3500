@@ -1,14 +1,15 @@
 """
 Ben Ecsedy, Jack Krolik, Teng Li, Joey Scolponeti
 DS3500
-NLP
+Homework 3
+2/27/2023
 """
 
 from collections import Counter, defaultdict
 import nltk
+# nltk.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
-import nltk.corpus
 from parser import read_lrc
 import string as s
 import pandas as pd
@@ -16,6 +17,7 @@ import seaborn as sns
 from ErrorHandler import *
 import plotly.graph_objects as go
 import numpy as np
+import regex as re
 
 
 
@@ -114,6 +116,101 @@ class NaturalLanguage:
 
         return song, results
 
+    @staticmethod
+    def plot_repetition(filenames, labels=None, parser='read_lrc'):
+        """
+        plots a repetition diagram of each song into a subplot grid
+
+        Args:
+            filenames (list): list of filenames to extract repetition data from
+            labels (list): labels for subplot titles, defaults to None
+            parser (string): parser to use for parsing lyric data based on file type,
+                defaults to 'read_lrc' to parse .lrc files
+
+        Returns:
+            nothing
+        """
+
+        # if labels are specified, ensure that the number of labels matches the number of files
+        if labels:
+            assert len(filenames) == len(labels), 'Number of files and labels do not match'
+
+        # if not, default to filenames for labels
+        else:
+            labels = filenames
+
+        # create list to store lyrics
+        lyrics = list()
+
+        # create separate NLP object to avoid editing data in original object
+        songs = NaturalLanguage(filenames=filenames, parser=parser)
+
+        # specifying dimensions of subplot grid
+        n_songs = len(songs.filenames)
+        n_cols = min(n_songs, 3)
+        n_rows = (n_songs + n_cols - 1) // n_cols
+
+        # create the figure and subplots with stylistic additions
+        fig, axs = plt.subplots(n_rows, n_cols, figsize=(50, 5 * n_rows))
+        fig.subplots_adjust(hspace=0.24, wspace=-0.86)
+        plt.figure(dpi=1000)
+        plt.axis('off')
+        plt.grid('False')
+        plt.tick_params(left=False, right=False, labelleft=False,
+                        labelbottom=False, bottom=False)
+
+        # split lyric list for each song
+        for song in songs.lyrics:
+            lyrics.append(song.split(sep=' '))
+
+        # clean lyrics to be all lowercase with no punctuation
+        for song in lyrics:
+            for idx in range(len(song)):
+                # stackoverflow.com/questions/1276764/stripping-everything-but-alphanumeric-chars-
+                # from-a-string-in-python
+                song[idx] = re.sub(r'\W+', '', song[idx]).lower()
+
+            # for each song in the list
+        for i, song in enumerate(lyrics):
+            # create one-to-one lyric-to-integer map
+            word_dict = {}
+            word_idx = 1
+
+            # assign each unique word in the song a unique number
+            for word in song:
+                if word not in word_dict:
+                    word_dict[word] = word_idx
+                    word_idx += 1
+
+            # consolidate lyric data into integer array
+            color_array = np.zeros((len(song), len(song)))
+            for idx, word_i in enumerate(song):
+                for jdx, word_j in enumerate(song):
+                    # if word i matches word j, then entry (ij) in color_array should match
+                    # the integer map of the word, if not then default to 0
+                    if word_i == word_j:
+                        color_array[idx, jdx] = word_dict.get(word_i)
+
+            # calculate row and column index based on song index
+            row = i // n_cols
+            col = i % n_cols
+
+            # plot the pixel plots
+            axs[row, col].imshow(color_array, cmap='twilight', interpolation='nearest')
+            axs[row, col].set_title(labels[i])
+            axs[row, col].set_xlabel('Word Number')
+            axs[row, col].set_ylabel('Word Number')
+
+        # remove any unused subplots
+        for j in range(n_songs, n_rows * n_cols):
+            row = j // n_cols
+            col = j % n_cols
+            axs[row, col].set_visible(False)
+
+        # showing and saving a copy of the plot
+        fig1 = plt.gcf()
+        plt.show()
+
     def df_parser(self, idx, **kwargs):
         """ gets a dataframe of sentiment about the song
 
@@ -152,7 +249,7 @@ class NaturalLanguage:
             kwargs: other keywords passed by user
         """
         assert isinstance(filenames, list), f"filenames parameter must be a list, got type {type(filenames)}"
-
+        assert len(filenames) > 0, "The number of files must be greater than 0"
         if labels:
             assert len(labels) == len(filenames), f"labels must be the same length as filenames " \
                                                  f"got {len(labels)} labels and {len(filenames)} filenames"
@@ -332,17 +429,3 @@ class NaturalLanguage:
 
         plt.show()
 
-
-# nlp = NaturalLanguage(filenames=['Songs/Drake - Hotline Bling.lrc'], parser='read_lrc')
-# print(nlp.lyrics[])
-# print(nlp.data['Songs/Drake - Hotline Bling.lrc'])
-
-songs = ['Songs/Dont-stop-me-now-by-Queen.lrc', 'Songs/Katy Perry - Firework.lrc',
-         'Songs/Thunderstruck by AC-DC.lrc', 'Songs/Elvis Presley - Hound Dog.lrc',
-         'Songs/Drives license by Olivia rodrigo.lrc', 'Songs/Thunderstruck by AC-DC.lrc',
-         'Songs/Drake - Hotline Bling.lrc']
-# names = ['idk', 'idc', 'lol', 'stupid', 'abc', 'efg', 'troll']
-
-
-nlp = NaturalLanguage(songs, parser='read_lrc')
-nlp.plot_sentiment(songs)

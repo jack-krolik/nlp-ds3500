@@ -1,3 +1,9 @@
+"""
+Ben Ecsedy, Jack Krolik, Teng Li, Joey Scolponeti
+DS3500
+Homework 3
+2/27/2023
+"""
 
 
 class ParserErrors(Exception):
