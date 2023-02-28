@@ -7,7 +7,7 @@ Homework 3
 
 from collections import Counter, defaultdict
 import nltk
-# nltk.download('vader_lexicon')
+nltk.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
 from parsers import read_lrc
