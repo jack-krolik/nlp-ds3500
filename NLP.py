@@ -10,7 +10,7 @@ import nltk
 # nltk.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
-from parser import read_lrc
+from parsers import read_lrc
 import string as s
 import pandas as pd
 import seaborn as sns
@@ -372,7 +372,7 @@ class NaturalLanguage:
         # If there is only 1 song processed in NLP object
         if len(filenames) == 1:
             # Get sentiment scores and rolling average for the current song
-            comp = self.data[filenames[0]]['df']['Sentiment']
+            comp = self.data[labels[0]]['df']['Sentiment']
             rolling_avg = pd.Series(comp).rolling(window=4).mean()
 
             # # Plot the sentiment scores and rolling average on a single plot
@@ -390,7 +390,7 @@ class NaturalLanguage:
             # Loop through each song, and plot each song in 1 row of subplots
             for i, (song, name) in enumerate(zip(filenames, labels)):
                 # Get sentiment scores and rolling average for the current song
-                comp = self.data[filenames[i]]['df']['Sentiment']
+                comp = self.data[labels[i]]['df']['Sentiment']
                 rolling_avg = pd.Series(comp).rolling(window=4).mean()
 
                 # Plot the sentiment scores and rolling average on the subplot
@@ -410,7 +410,7 @@ class NaturalLanguage:
                 col = i % n_cols
 
                 # Get sentiment scores and rolling average for the current song
-                comp = self.data[filenames[i]]['df']['Sentiment']
+                comp = self.data[labels[i]]['df']['Sentiment']
                 rolling_avg = pd.Series(comp).rolling(window=4).mean()
 
                 # Plot the sentiment scores and rolling average on the subplot
