@@ -382,6 +382,7 @@ class NaturalLanguage:
             plt.xlabel('Lyric Line Number')
             plt.ylabel('Sentiment Score')
             plt.legend(loc='upper left')
+            plt.ylim([-1,1])
 
             plt.show()
 
@@ -400,6 +401,7 @@ class NaturalLanguage:
                 axs[i].set_xlabel('Lyric Line Number')
                 axs[i].set_ylabel('Sentiment Score')
                 axs[i].legend(loc='upper left')
+                axs[i].set_ylim(-1, 1)
 
         # If there are more than 3 songs processed in NLP object
         else:
@@ -420,6 +422,7 @@ class NaturalLanguage:
                 axs[row, col].set_xlabel('Lyric Line Number')
                 axs[row, col].set_ylabel('Sentiment Score')
                 axs[row, col].legend(loc='upper left')
+                axs[row, col].set_ylim(-1, 1)
 
             # Remove any unused subplots
             for i in range(n_songs, n_rows * n_cols):
